@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Player de Áudio Responsivo</title>
+  <style>
+    body { background-color: #000; color: #fff; font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; min-height: 100vh; }
+    .cover { width: 100%; max-width: 300px; margin-bottom: 20px; }
+    .cover img { width: 100%; border-radius: 12px; box-shadow: 0 4px 12px rgba(255,255,255,0.2); }
+    .player { width:100%; max-width:400px; background:#111; border-radius:12px; padding:20px; box-shadow:0 4px 12px rgba(255,255,255,0.1); display:flex; flex-direction:column; align-items:center; }
+    .track-title { font-size:18px; font-weight:bold; text-align:center; margin-bottom:15px; }
+    .controls { display:flex; align-items:center; justify-content:center; gap:30px; margin-top:10px; }
+    .control-btn { background:none; border:none; cursor:pointer; width:70px; height:70px; display:flex; align-items:center; justify-content:center; transition:transform 0.2s; }
+    .control-btn:hover { transform:scale(1.1); }
+    .control-btn svg { width:40px; height:40px; fill:white; }
+    .progress-bar { width:100%; height:8px; background:#333; border-radius:4px; overflow:hidden; margin-top:20px; cursor:pointer; position:relative; }
+    .progress { height:100%; background:linear-gradient(90deg, white 0%, #777 100%); width:0%; transition:width 0.2s linear; }
+    .time-info { width:100%; display:flex; justify-content:space-between; font-size:12px; color:#aaa; margin-top:5px; }
+    .playlist { margin-top:20px; width:100%; }
+    .playlist-item { padding:14px 10px; margin-bottom:8px; cursor:pointer; border-bottom:1px solid #333; text-align:left; font-size:16px; line-height:1.4; }
+    .playlist-item:hover { background:#222; }
+    .playlist-item.active { background:#333; }
+    @media(max-width:400px) {
+      .control-btn { width:60px; height:60px; }
+      .control-btn svg { width:36px; height:36px; }
+      .track-title { font-size:16px; }
+      .playlist-item { font-size:14px; padding:12px 8px; margin-bottom:6px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="cover">
+    <img id="cover-image" src="https://live.staticflickr.com/65535/54485262583_ef4d2e62a1_w.jpg" alt="Capa do Álbum"/>
+  </div>
+  <div class="player">
+    <div class="track-title" id="track-title">Selecione um Capítulo</div>
+    <div class="controls">
+      <button id="prev-btn" class="control-btn" title="Anterior"><svg viewBox="0 0 24 24"><path d="M18 20l-8.5-8L18 4v16zM6 4h2v16H6V4z"/></svg></button>
+      <button id="play-btn" class="control-btn" title="Play/Pause">
+        <svg id="play-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        <svg id="pause-icon" viewBox="0 0 24 24" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+      </button>
+      <button id="next-btn" class="control-btn" title="Próxima"><svg viewBox="0 0 24 24"><path d="M6 4l8.5 8L6 20V4zm9 0h2v16h-2V4z"/></svg></button>
+    </div>
+    <div class="progress-bar" id="progress-bar"><div class="progress" id="progress"></div></div>
+    <div class="time-info"><span id="current-time">00:00</span><span id="total-time">00:00</span></div>
+    <audio id="audio-player">Seu navegador não suporta o elemento de áudio.</audio>
+    <div class="playlist" id="playlist">
+      <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/1.1.MP3" data-title="Cristão Inicia Sua Jornada">0 - Cristão Inicia Sua Jornada</div>
+      <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/1.mp3" data-title="O Pântano do Desespero">1 - O Pântano do Desespero</div>
+      <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/2.mp3" data-title="O Retorno de Cristão ao Bom Caminho">2 - O Retorno de Cristão ao Bom Caminho</div>
+      <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/3.mp3" data-title="Jornada Rumo à Casa das Virtudes">3 - Jornada Rumo à Casa das Virtudes</div>
+      <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/4.mp3" data-title="Nos Vales da Humildade e da Morte">4 - Nos Vales da Humildade e da Morte</div>
+      <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/5.mp3" data-title="Cristão e Fiel">5 - Cristão e Fiel</div>
+      <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/6.mp3" data-title="A Feira da Vaidade e A Cidade da Vaidade">6 - A Feira da Vaidade e A Cidade da Vaidade</div>
+      <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/7.mp3" data-title="Jornada às Montanhas Deleitáveis">7 - Jornada às Montanhas Deleitáveis</div>
+      <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/8.mp3" data-title="Com os Pastores">8 - Com os Pastores</div>
+      <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/9.mp3" data-title="No País Baixo da Presunção">9 - No País Baixo da Presunção</div>
+      <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/10.mp3" data-title="A Conversa com a Ignorância">10 - A Conversa com a Ignorância</div>
+      <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/11.mp3" data-title="Próximo à Cidade de Deus">11 - Próximo à Cidade de Deus</div>
+      <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/12.mp3" data-title="A Jornada de Cristão">12 - A Jornada de Cristão</div>
+      <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/13.mp3" data-title="Na Casa do Intérprete">13 - Na Casa do Intérprete</div>
+      <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/14.mp3" data-title="A Orientação de Generoso">14 - A Orientação de Generoso</div>
+      <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/15.mp3" data-title="Na Estalagem do Porteiro">15 - Na Estalagem do Porteiro</div>
+      <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/16.mp3" data-title="No Caminho com Generoso">16 - No Caminho com Generoso</div>
+      <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/17.mp3" data-title="Na Casa de Gaio e Naason">17 - Na Casa de Gaio e Naason</div>
+      <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/18.mp3" data-title="Cristão nas Montanhas Deleitáveis">18 - Cristão nas Montanhas Deleitáveis</div>
+      <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/19.mp3" data-title="Na Terra Encantada">19 - Na Terra Encantada</div>
+      <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/20.mp3" data-title="A terra de Beulá">20 - A terra de Beulá</div>
+    </div>
+  </div>
+  <script>
+    const audioPlayer = document.getElementById('audio-player');
+    const playBtn = document.getElementById('play-btn');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const trackTitle = document.getElementById('track-title');
+    const playlistItems = document.querySelectorAll('.playlist-item');
+    const progressBar = document.getElementById('progress-bar');
+    const progress = document.getElementById('progress');
+    const playIcon = document.getElementById('play-icon');
+    const pauseIcon = document.getElementById('pause-icon');
+    const currentTimeDisplay = document.getElementById('current-time');
+    const totalTimeDisplay = document.getElementById('total-time');
+    let isPlaying=false, currentIndex=0;
+    const tracks=Array.from(playlistItems);
+    function formatTime(s){const m=Math.floor(s/60), sec=Math.floor(s%60);return`${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;}
+    function loadTrack(i){tracks.forEach(e=>e.classList.remove('active')); const it=tracks[i]; it.classList.add('active'); audioPlayer.src=it.dataset.src; trackTitle.textContent=it.dataset.title;}
+    function playPause(){if(!audioPlayer.src)return; isPlaying?audioPlayer.pause():audioPlayer.play();}
+    playBtn.addEventListener('click', playPause);
+    prevBtn.addEventListener('click', ()=>{currentIndex=(currentIndex-1+tracks.length)%tracks.length;loadTrack(currentIndex);audioPlayer.play();});
+    nextBtn.addEventListener('click', ()=>{currentIndex=(currentIndex+1)%tracks.length;loadTrack(currentIndex);audioPlayer.play();});
+    audioPlayer.addEventListener('play', ()=>{isPlaying=true;playIcon.style.display='none';pauseIcon.style.display='inline';});
+    audioPlayer.addEventListener('pause', ()=>{isPlaying=false;playIcon.style.display='inline';pauseIcon.style.display='none';});
+    audioPlayer.addEventListener('loadedmetadata', ()=>{totalTimeDisplay.textContent=formatTime(audioPlayer.duration);});
+    audioPlayer.addEventListener('timeupdate', ()=>{if(!audioPlayer.duration)return;progress.style.width=((audioPlayer.currentTime/audioPlayer.duration)*100)+'%';currentTimeDisplay.textContent=formatTime(audioPlayer.currentTime);});
+    audioPlayer.addEventListener('ended', ()=>{currentIndex=(currentIndex+1)%tracks.length;loadTrack(currentIndex);audioPlayer.play();});
+    progressBar.addEventListener('click',e=>{const rect=progressBar.getBoundingClientRect();audioPlayer.currentTime=((e.clientX-rect.left)/rect.width)*audioPlayer.duration;});
+    playlistItems.forEach((it,i)=>it.addEventListener('click',()=>{currentIndex=i;loadTrack(i);audioPlayer.play();}));
+  </script>
+</body>
+</html>
