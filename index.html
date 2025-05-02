@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Player de Áudio Responsivo</title>
+  <!-- Ícone padrão (será substituído dinamicamente) -->
+  <link rel="icon" id="favicon" href="https://live.staticflickr.com/65535/54485262583_ef4d2e62a1_w.jpg" sizes="300x300" type="image/jpeg">
+
   <style>
     body { background-color: #000; color: #fff; font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; min-height: 100vh; }
     .cover { width: 100%; max-width: 300px; margin-bottom: 20px; }
@@ -43,9 +46,11 @@
       </button>
       <button id="next-btn" class="control-btn" title="Próxima"><svg viewBox="0 0 24 24"><path d="M6 4l8.5 8L6 20V4zm9 0h2v16h-2V4z"/></svg></button>
     </div>
+
     <div class="progress-bar" id="progress-bar"><div class="progress" id="progress"></div></div>
     <div class="time-info"><span id="current-time">00:00</span><span id="total-time">00:00</span></div>
-    <audio id="audio-player">Seu navegador não suporta o elemento de áudio.</audio>
+    <audio id="audio-player">Seu navegador não suporta áudio.</audio>
+
     <div class="playlist" id="playlist">
       <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/1.1.MP3" data-title="A Jornada de Cristão">0 - A Jornada de Cristão</div>
       <div class="playlist-item" data-src="https://archive.org/download/5_20250429_20250429_1351/1.mp3" data-title="O Pântano do Desespero">1 - O Pântano do Desespero</div>
@@ -76,6 +81,7 @@
     const prevBtn = document.getElementById('prev-btn');
     const nextBtn = document.getElementById('next-btn');
     const trackTitle = document.getElementById('track-title');
+    const coverImage = document.getElementById('cover-image');
     const playlistItems = document.querySelectorAll('.playlist-item');
     const progressBar = document.getElementById('progress-bar');
     const progress = document.getElementById('progress');
@@ -83,21 +89,85 @@
     const pauseIcon = document.getElementById('pause-icon');
     const currentTimeDisplay = document.getElementById('current-time');
     const totalTimeDisplay = document.getElementById('total-time');
-    let isPlaying=false, currentIndex=0;
-    const tracks=Array.from(playlistItems);
-    function formatTime(s){const m=Math.floor(s/60), sec=Math.floor(s%60);return`${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;}
-    function loadTrack(i){tracks.forEach(e=>e.classList.remove('active')); const it=tracks[i]; it.classList.add('active'); audioPlayer.src=it.dataset.src; trackTitle.textContent=it.dataset.title;}
-    function playPause(){if(!audioPlayer.src)return; isPlaying?audioPlayer.pause():audioPlayer.play();}
+    const faviconLink = document.getElementById('favicon');
+
+    let isPlaying = false;
+    let currentIndex = 0;
+    const tracks = Array.from(playlistItems);
+
+    function formatTime(s) {
+      const m = Math.floor(s/60);
+      const sec = Math.floor(s%60);
+      return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    }
+
+    function updateMetadata() {
+      const title = tracks[currentIndex].dataset.title;
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title,
+          artwork: [ { src: coverImage.src, sizes: '300x300', type: 'image/jpeg' } ]
+        });
+        navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+        navigator.mediaSession.setActionHandler('play', () => playPause());
+        navigator.mediaSession.setActionHandler('pause', () => playPause());
+        navigator.mediaSession.setActionHandler('previoustrack', () => prevBtn.click());
+        navigator.mediaSession.setActionHandler('nexttrack', () => nextBtn.click());
+        navigator.mediaSession.setActionHandler('seekbackward', ({ seekOffset }) => {
+          audioPlayer.currentTime = Math.max(audioPlayer.currentTime - (seekOffset || 10), 0);
+        });
+        navigator.mediaSession.setActionHandler('seekforward', ({ seekOffset }) => {
+          audioPlayer.currentTime = Math.min(audioPlayer.currentTime + (seekOffset || 10), audioPlayer.duration);
+        });
+      }
+      document.title = `${title} – Player de Áudio`;
+      faviconLink.href = coverImage.src;
+    }
+
+    function loadTrack(i) {
+      tracks.forEach(el => el.classList.remove('active'));
+      tracks[i].classList.add('active');
+      audioPlayer.src = tracks[i].dataset.src;
+      trackTitle.textContent = tracks[i].dataset.title;
+      currentIndex = i;
+      updateMetadata();
+    }
+
+    function playPause() {
+      if (!audioPlayer.src) {
+        loadTrack(0);
+      }
+      isPlaying ? audioPlayer.pause() : audioPlayer.play();
+    }
+
     playBtn.addEventListener('click', playPause);
-    prevBtn.addEventListener('click', ()=>{currentIndex=(currentIndex-1+tracks.length)%tracks.length;loadTrack(currentIndex);audioPlayer.play();});
-    nextBtn.addEventListener('click', ()=>{currentIndex=(currentIndex+1)%tracks.length;loadTrack(currentIndex);audioPlayer.play();});
-    audioPlayer.addEventListener('play', ()=>{isPlaying=true;playIcon.style.display='none';pauseIcon.style.display='inline';});
-    audioPlayer.addEventListener('pause', ()=>{isPlaying=false;playIcon.style.display='inline';pauseIcon.style.display='none';});
-    audioPlayer.addEventListener('loadedmetadata', ()=>{totalTimeDisplay.textContent=formatTime(audioPlayer.duration);});
-    audioPlayer.addEventListener('timeupdate', ()=>{if(!audioPlayer.duration)return;progress.style.width=((audioPlayer.currentTime/audioPlayer.duration)*100)+'%';currentTimeDisplay.textContent=formatTime(audioPlayer.currentTime);});
-    audioPlayer.addEventListener('ended', ()=>{currentIndex=(currentIndex+1)%tracks.length;loadTrack(currentIndex);audioPlayer.play();});
-    progressBar.addEventListener('click',e=>{const rect=progressBar.getBoundingClientRect();audioPlayer.currentTime=((e.clientX-rect.left)/rect.width)*audioPlayer.duration;});
-    playlistItems.forEach((it,i)=>it.addEventListener('click',()=>{currentIndex=i;loadTrack(i);audioPlayer.play();}));
+    prevBtn.addEventListener('click', () => { currentIndex = (currentIndex - 1 + tracks.length) % tracks.length; loadTrack(currentIndex); audioPlayer.play(); });
+    nextBtn.addEventListener('click', () => { currentIndex = (currentIndex + 1) % tracks.length; loadTrack(currentIndex); audioPlayer.play(); });
+
+    audioPlayer.addEventListener('play', () => { isPlaying = true; playIcon.style.display = 'none'; pauseIcon.style.display = 'inline'; updateMetadata(); });
+    audioPlayer.addEventListener('pause', () => { isPlaying = false; playIcon.style.display = 'inline'; pauseIcon.style.display = 'none'; updateMetadata(); });
+
+    audioPlayer.addEventListener('loadedmetadata', () => {
+      updateMetadata();
+      totalTimeDisplay.textContent = formatTime(audioPlayer.duration);
+    });
+
+    audioPlayer.addEventListener('timeupdate', () => {
+      if (!audioPlayer.duration) return;
+      progress.style.width = `${(audioPlayer.currentTime / audioPlayer.duration) * 100}%`;
+      currentTimeDisplay.textContent = formatTime(audioPlayer.currentTime);
+    });
+
+    audioPlayer.addEventListener('ended', () => { currentIndex = (currentIndex + 1) % tracks.length; loadTrack(currentIndex); audioPlayer.play(); });
+
+    progressBar.addEventListener('click', e => {
+      const rect = progressBar.getBoundingClientRect();
+      audioPlayer.currentTime = ((e.clientX - rect.left) / rect.width) * audioPlayer.duration;
+    });
+
+    playlistItems.forEach((item, i) => item.addEventListener('click', () => { currentIndex = i; loadTrack(i); audioPlayer.play(); }));
+
+    // Não carrega faixa automaticamente no início. Seleção e reprodução começam ao clicar em Play.
   </script>
 </body>
 </html>
